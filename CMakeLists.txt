@@ -2,7 +2,7 @@
 # $Copyright$
 #
 cmake_minimum_required(VERSION 3.12)
-project(stm32f1-minimal)
+project(stm32f1-usbdevice)
 
 ###############################################################################
 # Enable C++17 Support according to:
