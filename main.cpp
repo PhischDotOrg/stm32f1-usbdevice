@@ -100,6 +100,9 @@ static stm32::Pwr                       pwr(rcc, scb);
 static stm32::Gpio::A                   gpio_A(rcc);
 static gpio::GpioEngine                 gpio_engine_A(&gpio_A);
 
+static stm32::Gpio::B                   gpio_B(rcc);
+static gpio::GpioEngine                 gpio_engine_B(&gpio_B);
+
 static stm32::Gpio::C                   gpio_C(rcc);
 static gpio::GpioEngine                 gpio_engine_C(&gpio_C);
 
@@ -168,23 +171,21 @@ static devices::Ws2812bStripT<
 /*******************************************************************************
  * USB Device
  ******************************************************************************/
-#if 0 /* TODO */
 static gpio::AlternateFnPin             usb_pin_dm(gpio_engine_A, 11);
 static gpio::AlternateFnPin             usb_pin_dp(gpio_engine_A, 12);
 static gpio::AlternateFnPin             usb_pin_vbus(gpio_engine_A, 9);
 static gpio::AlternateFnPin             usb_pin_id(gpio_engine_A, 10);
 
-static stm32::usb::UsbFullSpeedCoreT<
+static stm32::f1::usb::UsbFullSpeedCoreT<
   decltype(nvic),
   decltype(rcc),
   decltype(usb_pin_dm)
->                                       usbCore(nvic, rcc, usb_pin_dm, usb_pin_dp, usb_pin_vbus, usb_pin_id, /* p_rxFifoSzInWords = */ 256);
-static stm32::usb::UsbDeviceViaSTM32F4          usbHwDevice(usbCore);
-static stm32::usb::CtrlInEndpointViaSTM32F4     defaultHwCtrlInEndpoint(usbHwDevice, /* p_fifoSzInWords = */ 0x20);
+>                                               usbCore(nvic, rcc, usb_pin_dm, usb_pin_dp, usb_pin_vbus, usb_pin_id, /* p_rxFifoSzInWords = */ 256);
+static stm32::Usb::UsbDevice                    usbHwDevice(usbCore);
+static stm32::Usb::CtrlInEndpoint               defaultHwCtrlInEndpoint(usbHwDevice, /* p_fifoSzInWords = */ 0x20);
 
-static stm32::usb::BulkInEndpointViaSTM32F4     bulkInHwEndp(usbHwDevice, /* p_fifoSzInWords = */ 128, 1);
+static stm32::Usb::BulkInEndpoint               bulkInHwEndp(usbHwDevice, /* p_fifoSzInWords = */ 128, 1);
 static usb::UsbBulkInEndpointT                  bulkInEndpoint(bulkInHwEndp);
-#endif
 
 #if defined(USB_APPLICATION_LOOPBACK)
 /* TODO I've found that increasing the buffer size beyond 951 Bytes will make things stop working. */
@@ -196,19 +197,18 @@ static usb::UsbUartApplicationT<decltype(uart_access)>              bulkOutAppli
 #endif
 
 #if defined(USB_APPLICATION_LOOPBACK) || defined(USB_APPLICATION_UART)
-// static usb::UsbBulkOutEndpointT<stm32::usb::BulkOutEndpointViaSTM32F4>  bulkOutEndpoint(bulkOutApplication);
-// static stm32::usb::BulkOutEndpointViaSTM32F4                            bulkOutHwEndp(usbHwDevice, bulkOutEndpoint, 1);
+static usb::UsbBulkOutEndpointT<stm32::Usb::BulkOutEndpoint> bulkOutEndpoint(bulkOutApplication);
+static stm32::Usb::BulkOutEndpoint                           bulkOutHwEndp(usbHwDevice, bulkOutEndpoint, 1);
 #endif /* defined(USB_APPLICATION_LOOPBACK) || defined(USB_APPLICATION_UART) */
 
 #if defined(USB_INTERFACE_VCP)
-// static usb::UsbVcpInterface                                         usbInterface(bulkOutEndpoint, bulkInEndpoint);
+static usb::UsbVcpInterface                                         usbInterface(bulkOutEndpoint, bulkInEndpoint);
 #elif defined(USB_INTERFACE_VENDOR)
-// static usb::UsbVendorInterface                                      usbInterface(bulkOutEndpoint, bulkInEndpoint);
+static usb::UsbVendorInterface                                      usbInterface(bulkOutEndpoint, bulkInEndpoint);
 #else
 #error No USB Interface defined.
 #endif
 
-#if 0 /* TODO */
 static usb::UsbConfiguration                                                usbConfiguration(usbInterface, usbConfigurationDescriptor);
 
 static usb::UsbDevice                                                       genericUsbDevice(usbHwDevice, usbDeviceDescriptor, usbStringDescriptors, { &usbConfiguration });
@@ -216,9 +216,8 @@ static usb::UsbDevice                                                       gene
 static usb::UsbCtrlInEndpointT                                              ctrlInEndp(defaultHwCtrlInEndpoint);
 static usb::UsbControlPipe                                                  defaultCtrlPipe(genericUsbDevice, ctrlInEndp);
 
-static usb::UsbCtrlOutEndpointT<stm32::usb::CtrlOutEndpointViaSTM32F4>      ctrlOutEndp(defaultCtrlPipe);
-static stm32::usb::CtrlOutEndpointViaSTM32F4                                defaultCtrlOutEndpoint(usbHwDevice, ctrlOutEndp);
-#endif
+static usb::UsbCtrlOutEndpointT<stm32::Usb::CtrlOutEndpoint>                ctrlOutEndp(defaultCtrlPipe);
+static stm32::Usb::CtrlOutEndpoint                                          defaultCtrlOutEndpoint(usbHwDevice, ctrlOutEndp);
 
 /*******************************************************************************
  * Tasks
@@ -331,7 +330,7 @@ USB_HP_CAN1_TX_IRQHandler(void) {
 
 void
 USB_LP_CAN1_RX0_IRQHandler(void) {
-    while (1);
+    usbCore.handleIrq();
 }
 
 void
