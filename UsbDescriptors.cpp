@@ -233,7 +233,7 @@ extern const struct UsbConfigurationDescriptor_s {
             /* Index #0 */ {
                 .m_bLength          = sizeof(decltype(usbConfigurationDescriptor.m_dataInterface.m_endpoints[0])),
                 .m_bDescriptorType  = ::usb::UsbDescriptorTypeId_e::e_Endpoint,
-                .m_bEndpointAddress = 0x01,
+                .m_bEndpointAddress = 0x01, /* OUT */
                 .m_bmAttributes     = 2,    // Bulk
                 .m_wMaxPacketSize = {
                     .m_loByte       = 64,
@@ -244,7 +244,7 @@ extern const struct UsbConfigurationDescriptor_s {
             /* Index #1 */ {
                 .m_bLength          = sizeof(decltype(usbConfigurationDescriptor.m_dataInterface.m_endpoints[1])),
                 .m_bDescriptorType  = ::usb::UsbDescriptorTypeId_e::e_Endpoint,
-                .m_bEndpointAddress = 0x81,
+                .m_bEndpointAddress = 0x81, /* IN */
                 .m_bmAttributes     = 2,    // Bulk
                 .m_wMaxPacketSize = {
                     .m_loByte       = 64,
