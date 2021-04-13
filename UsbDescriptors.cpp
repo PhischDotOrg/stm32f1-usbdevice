@@ -46,9 +46,16 @@ extern const ::usb::UsbDeviceDescriptor_t usbDeviceDescriptor FIXED_DATA = {
 static constexpr ::usb::UsbLangId_t usbSupportedLanguageIds[] = { 0x0409, 0x0000 };
 static const auto usbLangIdStringDescriptor         FIXED_DATA  = ::usb::UsbLangIdStringDescriptor(usbSupportedLanguageIds);
 static const auto usbStringDescriptorManufacturer   FIXED_DATA  = ::usb::UsbStringDescriptor(u"PhiSch.org");
-static const auto usbStringDescriptorSerialNumber   FIXED_DATA  = ::usb::UsbStringDescriptor(u"8A8DA116-6DF5-4418-B5A0-F308B3688B6B");
+static const auto usbStringDescriptorSerialNumber   FIXED_DATA  = ::usb::UsbStringDescriptor(u"5D4DFA36-8E3E-44CD-96BC-26074E3CA6B6");
+#if defined(USB_INTERFACE_VENDOR)
+static const auto usbStringDescriptorProduct        FIXED_DATA  = ::usb::UsbStringDescriptor(u"PhiSch.org USB Vendor Interface Demo on STM32F1 BluePill");
+static const auto usbStringDescriptorConfiguration  FIXED_DATA  = ::usb::UsbStringDescriptor(u"PhiSch.org USB Vendor Interface Configuration");
+#endif /* defined(USB_INTERFACE_VENDOR) */
+#if defined(USB_INTERFACE_VCP)
 static const auto usbStringDescriptorProduct        FIXED_DATA  = ::usb::UsbStringDescriptor(u"PhiSch.org USB Virtual COM Port (VCP) Demo on STM32F1 BluePill");
 static const auto usbStringDescriptorConfiguration  FIXED_DATA  = ::usb::UsbStringDescriptor(u"PhiSch.org USB Virtual COM Port (VCP) Configuration");
+#endif /* defined(USB_INTERFACE_VCP) */
+
 static const auto usbStringDescriptorInterface      FIXED_DATA  = ::usb::UsbStringDescriptor(u"PhiSch.org USB Comm. Device Class (CDC) Interface");
 
 extern const ::usb::UsbStringDescriptors_t usbStringDescriptors FIXED_DATA = {
