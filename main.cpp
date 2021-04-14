@@ -105,14 +105,11 @@ static gpio::GpioEngine                 gpio_engine_A(&gpio_A);
 static stm32::Gpio::B                   gpio_B(rcc);
 static gpio::GpioEngine                 gpio_engine_B(&gpio_B);
 
-static stm32::Gpio::C                   gpio_C(rcc);
-static gpio::GpioEngine                 gpio_engine_C(&gpio_C);
-
 /*******************************************************************************
  * LEDs
  ******************************************************************************/
 static gpio::AlternateFnPin             g_mco1(gpio_engine_A, 8);
-static gpio::DigitalOutPin              g_led_green(gpio_engine_B, 12);
+static gpio::DigitalOutPin              g_led_green(gpio_engine_B, 2);
 
 /*******************************************************************************
  * SWO Trace via the Cortex M4 Debug Infrastructure
@@ -140,8 +137,8 @@ static gpio::AlternateFnPin             usb_pin_dm(gpio_engine_A, 11);
 static gpio::AlternateFnPin             usb_pin_dp(gpio_engine_A, 12);
 
 alignas(4) UsbAlloc<64>     EP0_BUF         USB_MEM;
-alignas(4) UsbAlloc<128>    IN_EP1_BUF      USB_MEM;
-alignas(4) UsbAlloc<128>    OUT_EP1_BUF     USB_MEM;
+alignas(4) UsbAlloc<64>     IN_EP1_BUF      USB_MEM;
+alignas(4) UsbAlloc<64>     OUT_EP1_BUF     USB_MEM;
 
 static stm32::f1::usb::UsbFullSpeedCoreT<
   decltype(nvic),
@@ -217,6 +214,28 @@ int
 void
 #endif
 main(void) {
+    /*
+     *  If the Board is powered via USB, then the external Pull-up on D+ is "always on". This
+     * means the host does not detect the USB device as being re-connected if the µC is restarted
+     * e.g. from the Debugger.
+     *  We can temporarily configure the D+ µC Pin as an OpenDrain output and pull it towards GND.
+     * This will trigger the Host to re-enumerate the USB.
+     * 
+     *  Once USB Device is enabled, the D+ µC GPIO Pin is directly connected to the Peripheral.
+     * See STM32F1 CPU Reference Manual RM0008 Rev 20 on pg. 168 (Sect. 9.1.11, Table 29).
+     * Therefore, the USB Hardware must not be started before the USB D+ Pin has been
+     * toggled via the Code below.
+     *
+     *  The Code below should be on a temporary stack frame as that will cause the DigitalOutPinT<>
+     * object's destructor to run. The destructor calls the disable() method which will re-set the
+     * Pin to its default state (Floating Input).
+     */
+    {
+        const ::gpio::DigitalOutPinT<::gpio::PinPolicy::Termination_e::e_PullUp> usb_rst(gpio_engine_A, 12);
+        usb_rst.set(false);
+        for (unsigned cnt = 100; cnt != 0; --cnt) __NOP();
+    }
+
     rcc.setMCO(g_mco1, decltype(rcc)::MCOOutput_e::e_HSE, decltype(rcc)::MCOPrescaler_t::e_MCOPre_None);
 
     uart_access.setBaudRate(decltype(uart_access)::BaudRate_e::e_230400);
@@ -250,7 +269,6 @@ bad:
 #endif
 }
 
-#if 1
 void
 debug_printf(const char * const p_fmt, ...) {
     va_list va;
@@ -260,7 +278,6 @@ debug_printf(const char * const p_fmt, ...) {
 
     va_end(va);
 }
-#endif
 
 /*******************************************************************************
  * Interrupt Handlers
