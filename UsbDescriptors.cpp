@@ -233,8 +233,8 @@ extern const struct UsbConfigurationDescriptor_s {
         .m_bAlternateSetting        = 0,
         .m_bNumEndpoints            = 2,
         .m_bInterfaceClass          = ::usb::UsbInterfaceClass_e::e_UsbInterface_VendorSpecific,
-        .m_bInterfaceSubClass       = 0,
-        .m_bInterfaceProtocol       = 0,
+        .m_bInterfaceSubClass       = 0x10, /* Magic Number for Test Code to Identify the Loopback Interface */
+        .m_bInterfaceProtocol       = 0x0b, /* Magic Number for Test Code to Identify the Loopback Interface */
         .m_iInterface               = 5, /* Index of m_interface within usbStringDescriptors.m_stringDescriptorTable */
         .m_endpoints                = {
             /* Index #0 */ {
