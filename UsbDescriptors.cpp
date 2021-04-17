@@ -229,7 +229,7 @@ extern const struct UsbConfigurationDescriptor_s {
     .m_dataInterface = {
         .m_bLength                  = sizeof(decltype(usbConfigurationDescriptor.m_dataInterface)) - sizeof(usbConfigurationDescriptor.m_dataInterface.m_endpoints),
         .m_bDescriptorType          = ::usb::UsbDescriptorTypeId_e::e_Interface,
-        .m_bInterfaceNumber         = 1,
+        .m_bInterfaceNumber         = 0,
         .m_bAlternateSetting        = 0,
         .m_bNumEndpoints            = 2,
         .m_bInterfaceClass          = ::usb::UsbInterfaceClass_e::e_UsbInterface_VendorSpecific,
