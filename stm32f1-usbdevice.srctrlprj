@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<config>
+    <source_groups>
+        <source_group_dd24ae8a-7e83-4e9c-9bd5-36fdfef0e646>
+            <build_file_path>
+                <compilation_db_path>build/compile_commands.json</compilation_db_path>
+            </build_file_path>
+            <compiler_flags>
+                <compiler_flag>--target=arm-none-eabi</compiler_flag>
+            </compiler_flags>
+            <header_search_paths>
+                <header_search_path>/usr/local/Cellar/arm-none-eabi-gcc/9-2019-q4-major/gcc/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/include/c++/9.2.1</header_search_path>
+                <header_search_path>/usr/local/Cellar/arm-none-eabi-gcc/9-2019-q4-major/gcc/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/include/c++/9.2.1/arm-none-eabi</header_search_path>
+                <header_search_path>/usr/local/Cellar/arm-none-eabi-gcc/9-2019-q4-major/gcc/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/include/c++/9.2.1/backward</header_search_path>
+                <header_search_path>/usr/local/Cellar/arm-none-eabi-gcc/9-2019-q4-major/gcc/bin/../lib/gcc/arm-none-eabi/9.2.1/include</header_search_path>
+                <header_search_path>/usr/local/Cellar/arm-none-eabi-gcc/9-2019-q4-major/gcc/bin/../lib/gcc/arm-none-eabi/9.2.1/include-fixed</header_search_path>
+                <header_search_path>/usr/local/Cellar/arm-none-eabi-gcc/9-2019-q4-major/gcc/bin/../lib/gcc/arm-none-eabi/9.2.1/../../../../arm-none-eabi/include</header_search_path>
+            </header_search_paths>
+            <indexed_header_paths>
+                <indexed_header_path>./</indexed_header_path>
+            </indexed_header_paths>
+            <name>C/C++ from Compilation Database</name>
+            <pch_flags>
+                <use_compiler_flags>1</use_compiler_flags>
+            </pch_flags>
+            <status>enabled</status>
+            <type>C/C++ from Compilation Database</type>
+        </source_group_dd24ae8a-7e83-4e9c-9bd5-36fdfef0e646>
+    </source_groups>
+    <version>8</version>
+</config>

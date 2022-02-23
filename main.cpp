@@ -40,39 +40,13 @@
 #include <usb/UsbOutEndpoint.hpp>
 #include <usb/UsbControlPipe.hpp>
 #include <usb/UsbConfiguration.hpp>
-#include <usb/UsbInterface.hpp>
+#include <usb/UsbVendorInterface.hpp>
 
 #include <usb/UsbApplication.hpp>
 
+#include <usb/UsbDescriptors.hpp>
 
-#include <stm32f1/dma/Engine.hpp>
-#include <stm32f1/dma/Channel.hpp>
-#include <stm32f1/dma/Stream.hpp>
-
-#include <stm32/Spi.hpp>
-#include <spi/SpiAccess.hpp>
-#include <spi/SpiDevice.hpp>
-#include <devices/Ws2812bStrip.hpp>
-
-#include "f1usb/src/usbutils.hh"
-
-/*******************************************************************************
- *
- ******************************************************************************/
-#if defined(__cplusplus)
-extern "C" {
-#endif /* defined(__cplusplus) */
-
-/*******************************************************************************
- * USB Descriptors (defined in UsbDescriptors.cpp)
- ******************************************************************************/
-extern const ::usb::UsbDeviceDescriptor_t usbDeviceDescriptor;
-extern const ::usb::UsbStringDescriptors_t usbStringDescriptors;
-extern const ::usb::UsbConfigurationDescriptor_t usbConfigurationDescriptor;
-
-#if defined(__cplusplus)
-} /* extern "C" */
-#endif /* defined(__cplusplus) */
+#include <array>
 
 /*******************************************************************************
  * System Devices
@@ -112,6 +86,27 @@ static gpio::AlternateFnPin             g_mco1(gpio_engine_A, 8);
 static gpio::DigitalOutPin              g_led_green(gpio_engine_B, 2);
 
 /*******************************************************************************
+ * Debug Pins
+ ******************************************************************************/
+static gpio::DigitalOutPinT< ::gpio::PinPolicy::Termination_e::e_None >   debugPin0(gpio_engine_A, 0);
+static gpio::DigitalOutPinT< ::gpio::PinPolicy::Termination_e::e_None >   debugPin1(gpio_engine_A, 1);
+static gpio::DigitalOutPinT< ::gpio::PinPolicy::Termination_e::e_None >   debugPin2(gpio_engine_A, 2);
+static gpio::DigitalOutPinT< ::gpio::PinPolicy::Termination_e::e_None >   debugPin3(gpio_engine_A, 3);
+static gpio::DigitalOutPinT< ::gpio::PinPolicy::Termination_e::e_None >   debugPin4(gpio_engine_A, 4);
+static gpio::DigitalOutPinT< ::gpio::PinPolicy::Termination_e::e_None >   debugPin5(gpio_engine_A, 5);
+
+static constexpr
+std::array
+debugPins {
+    &debugPin0, //  USB_LP_CAN1_RX0_IRQHandler
+    &debugPin1, //  USB Ctrl Pipe -- State Bit #0
+    &debugPin2, //  USB Ctrl Pipe -- State Bit #1
+    &debugPin3, //  USB Ctrl Pipe -- State Bit #2
+    &debugPin4, //  Ctrl OUT Endp -- Data Toggle
+    &debugPin5, //  Ctrl IN Endp -- Data Toggle
+};
+
+/*******************************************************************************
  * SWO Trace via the Cortex M4 Debug Infrastructure
  ******************************************************************************/
 static gpio::AlternateFnPin swo(gpio_engine_B, 3);
@@ -144,44 +139,27 @@ static stm32::f1::usb::UsbFullSpeedCoreT<
   decltype(nvic),
   decltype(rcc),
   decltype(usb_pin_dm)
->                                               usbCore(nvic, rcc, usb_pin_dm, usb_pin_dp, /* p_rxFifoSzInWords = */ 256);
-static stm32::Usb::UsbDevice                    usbHwDevice(usbCore);
+>                                               usbHwDevice(nvic, rcc, usb_pin_dm, usb_pin_dp, /* p_rxFifoSzInWords = */ 256);
 static stm32::Usb::CtrlInEndpoint               defaultHwCtrlInEndpoint(usbHwDevice, EP0_BUF.data, EP0_BUF.size);
+static ::usb::UsbCtrlInEndpoint                 defaultCtrlInEndpoint(defaultHwCtrlInEndpoint);
 
 static stm32::Usb::BulkInEndpoint               bulkInHwEndp(usbHwDevice, IN_EP1_BUF.data, IN_EP1_BUF.size, 1);
-static usb::UsbBulkInEndpointT                  bulkInEndpoint(bulkInHwEndp);
+static ::usb::UsbBulkInEndpoint                 bulkInEndp(bulkInHwEndp);
 
-#if defined(USB_APPLICATION_LOOPBACK)
-/* TODO I've found that increasing the buffer size beyond 951 Bytes will make things stop working. */
-static usb::UsbBulkOutLoopbackApplicationT<512>                     bulkOutApplication(bulkInEndpoint);
-#elif defined(USB_APPLICATION_UART)
-static usb::UsbUartApplicationT<decltype(uart_access)>              bulkOutApplication(uart_access);
-#else
-#warning No USB Application defined.
-#endif
+static usb::UsbBulkOutLoopbackApplicationT<512> bulkOutApplication(bulkInEndp);
 
-#if defined(USB_APPLICATION_LOOPBACK) || defined(USB_APPLICATION_UART)
-static usb::UsbBulkOutEndpointT<stm32::Usb::BulkOutEndpoint> bulkOutEndpoint(bulkOutApplication);
-static stm32::Usb::BulkOutEndpoint                           bulkOutHwEndp(usbHwDevice, bulkOutEndpoint, OUT_EP1_BUF.data, OUT_EP1_BUF.size, 1);
-#endif /* defined(USB_APPLICATION_LOOPBACK) || defined(USB_APPLICATION_UART) */
+static usb::UsbBulkOutEndpoint                  bulkOutEndp(bulkOutApplication);
+static stm32::Usb::BulkOutEndpoint              bulkOutHwEndp(usbHwDevice, bulkOutEndp, OUT_EP1_BUF.data, OUT_EP1_BUF.size, 1);
 
-#if defined(USB_INTERFACE_VCP)
-static usb::UsbVcpInterface                                         usbInterface(bulkOutEndpoint, bulkInEndpoint);
-#elif defined(USB_INTERFACE_VENDOR)
-static usb::UsbVendorInterface                                      usbInterface(bulkOutEndpoint, bulkInEndpoint);
-#else
-#error No USB Interface defined.
-#endif
+static usb::UsbVendorInterface                  usbInterface(bulkOutEndp, bulkInEndp);
 
-static usb::UsbConfiguration                                                usbConfiguration(usbInterface, usbConfigurationDescriptor);
+static usb::UsbConfiguration                    usbConfiguration(usbInterface, *::usb::descriptors::vendor::usbConfigurationDescriptor);
+static usb::UsbDevice                           genericUsbDevice(usbHwDevice, ::usb::descriptors::vendor::usbDeviceDescriptor, ::usb::descriptors::vendor::usbStringDescriptors, { &usbConfiguration });
 
-static usb::UsbDevice                                                       genericUsbDevice(usbHwDevice, usbDeviceDescriptor, usbStringDescriptors, { &usbConfiguration });
+static usb::UsbControlPipe                      defaultCtrlPipe(genericUsbDevice, defaultCtrlInEndpoint);
 
-static usb::UsbCtrlInEndpointT                                              ctrlInEndp(defaultHwCtrlInEndpoint);
-static usb::UsbControlPipe                                                  defaultCtrlPipe(genericUsbDevice, ctrlInEndp);
-
-static usb::UsbCtrlOutEndpointT<stm32::Usb::CtrlOutEndpoint>                ctrlOutEndp(defaultCtrlPipe);
-static stm32::Usb::CtrlOutEndpoint                                          defaultCtrlOutEndpoint(usbHwDevice, ctrlOutEndp, EP0_BUF.data, EP0_BUF.size);
+static usb::UsbCtrlOutEndpoint                  defaultCtrlOutEndp(defaultCtrlPipe);
+static stm32::Usb::CtrlOutEndpoint              defaultHwCtrlOutEndp(usbHwDevice, defaultCtrlOutEndp, EP0_BUF.data, EP0_BUF.size);
 
 /*******************************************************************************
  * Tasks
@@ -214,6 +192,10 @@ int
 void
 #endif
 main(void) {
+    for (auto pin : debugPins) {
+        pin->set(false);
+    }
+
     /*
      *  If the Board is powered via USB, then the external Pull-up on D+ is "always on". This
      * means the host does not detect the USB device as being re-connected if the µC is restarted
@@ -253,12 +235,12 @@ main(void) {
         goto bad;
     }
 
-    usbHwDevice.start();
+    defaultCtrlPipe.start();
 
     PHISCH_LOG("Starting FreeRTOS Scheduler...\r\n");
     vTaskStartScheduler();
 
-    usbHwDevice.stop();
+    defaultCtrlPipe.stop();
 
 bad:
     PHISCH_LOG("FATAL ERROR!\r\n");
@@ -279,6 +261,13 @@ debug_printf(const char * const p_fmt, ...) {
     va_end(va);
 }
 
+void
+debug_setpin(const unsigned p_pin, const bool p_value) {
+    assert(p_pin < debugPins.size());
+
+    debugPins[p_pin]->set(p_value);
+}
+
 /*******************************************************************************
  * Interrupt Handlers
  ******************************************************************************/
@@ -289,7 +278,9 @@ USB_HP_CAN1_TX_IRQHandler(void) {
 
 void
 USB_LP_CAN1_RX0_IRQHandler(void) {
-    usbCore.handleIrq();
+    PHISCH_SETPIN(0, true);
+    usbHwDevice.handleIrq();
+    PHISCH_SETPIN(0, false);
 }
 
 void
