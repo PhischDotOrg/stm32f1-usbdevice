@@ -131,25 +131,28 @@ uart::UartDevice                        g_uart(&uart_access);
 static gpio::AlternateFnPin             usb_pin_dm(gpio_engine_A, 11);
 static gpio::AlternateFnPin             usb_pin_dp(gpio_engine_A, 12);
 
-alignas(4) UsbAlloc<64>     EP0_BUF         USB_MEM;
-alignas(4) UsbAlloc<64>     IN_EP1_BUF      USB_MEM;
-alignas(4) UsbAlloc<64>     OUT_EP1_BUF     USB_MEM;
+alignas(4) stm32::f1::usb::Device::FifoSpace<64>    EP0_BUF USB_MEM;
+static_assert(EP0_BUF.size() == 64);                    // Can store 64 Bytes of Data
+static_assert(sizeof(EP0_BUF) == 2 * EP0_BUF.size());   // Occupies twice the amount of Address Space 
+
+alignas(4) stm32::f1::usb::Device::FifoSpace<64>    IN_EP1_BUF      USB_MEM;
+alignas(4) stm32::f1::usb::Device::FifoSpace<64>    OUT_EP1_BUF     USB_MEM;
 
 static stm32::f1::usb::UsbFullSpeedCoreT<
   decltype(nvic),
   decltype(rcc),
   decltype(usb_pin_dm)
 >                                               usbHwDevice(nvic, rcc, usb_pin_dm, usb_pin_dp, /* p_rxFifoSzInWords = */ 256);
-static stm32::Usb::CtrlInEndpoint               defaultHwCtrlInEndpoint(usbHwDevice, EP0_BUF.data, EP0_BUF.size);
+static stm32::Usb::CtrlInEndpoint               defaultHwCtrlInEndpoint(usbHwDevice, EP0_BUF.data(), EP0_BUF.size());
 static ::usb::UsbCtrlInEndpoint                 defaultCtrlInEndpoint(defaultHwCtrlInEndpoint);
 
-static stm32::Usb::BulkInEndpoint               bulkInHwEndp(usbHwDevice, IN_EP1_BUF.data, IN_EP1_BUF.size, 1);
+static stm32::Usb::BulkInEndpoint               bulkInHwEndp(usbHwDevice, IN_EP1_BUF.data(), IN_EP1_BUF.size(), 1);
 static ::usb::UsbBulkInEndpoint                 bulkInEndp(bulkInHwEndp);
 
 static usb::UsbBulkOutLoopbackApplicationT<512> bulkOutApplication(bulkInEndp);
 
 static usb::UsbBulkOutEndpoint                  bulkOutEndp(bulkOutApplication);
-static stm32::Usb::BulkOutEndpoint              bulkOutHwEndp(usbHwDevice, bulkOutEndp, OUT_EP1_BUF.data, OUT_EP1_BUF.size, 1);
+static stm32::Usb::BulkOutEndpoint              bulkOutHwEndp(usbHwDevice, bulkOutEndp, OUT_EP1_BUF.data(), OUT_EP1_BUF.size(), 1);
 
 static usb::UsbVendorInterface                  usbInterface(bulkOutEndp, bulkInEndp);
 
@@ -159,7 +162,7 @@ static usb::UsbDevice                           genericUsbDevice(usbHwDevice, ::
 static usb::UsbControlPipe                      defaultCtrlPipe(genericUsbDevice, defaultCtrlInEndpoint);
 
 static usb::UsbCtrlOutEndpoint                  defaultCtrlOutEndp(defaultCtrlPipe);
-static stm32::Usb::CtrlOutEndpoint              defaultHwCtrlOutEndp(usbHwDevice, defaultCtrlOutEndp, EP0_BUF.data, EP0_BUF.size);
+static stm32::Usb::CtrlOutEndpoint              defaultHwCtrlOutEndp(usbHwDevice, defaultCtrlOutEndp, EP0_BUF.data(), EP0_BUF.size());
 
 /*******************************************************************************
  * Tasks
